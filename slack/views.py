@@ -20,6 +20,7 @@ def check_isitup(request):
 	return JsonResponse({'slack-commands': ['isitup']})
 
 
+@csrf_exempt
 def check_ttc(request):
 	if request.method == 'POST':
 		form = TTCForm(request.POST)
