@@ -6,6 +6,7 @@ from .forms import IsitupForm, TTCForm
 
 from isitup.main import check
 import requests
+import xml.etree.ElementTree as ET
 
 @csrf_exempt
 def check_isitup(request):
@@ -28,11 +29,15 @@ def check_ttc(request):
 		if form.is_valid():
 			text = form.cleaned_data['text']
 
-			# r = requests.get('http://webservices.nextbus.com/service/publicXMLFeed?command=routeConfig&a=ttc&r=%s' % text)
 			url = 'http://webservices.nextbus.com/service/publicXMLFeed?command=routeConfig&a=ttc&r=' + text
 			headers = { 'Accept-Encoding': 'gzip, deflate', }
 			r = requests.get(url, headers = headers)
+                        root = ET.fromstring(r.text)
 
-			return JsonResponse({'text': t.text})
+                        # import ipdb; ipdb.set_trace()
+			response = map(lambda x: x.attrib['title'], root.findall('./route/stop/[@title]'))
+                        text = '\n'.join(response)
+			return JsonResponse({'text': text })
+
 
 	return JsonResponse({'slack-commands': ['ttc']})
