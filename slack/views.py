@@ -41,9 +41,6 @@ def handle_route(route_number):
 
     return text
 
-def handle_schedule(bus_stop_number):
-    return 'no schedules found'
-
 def handle_next(bus_stop_number):
     url = 'http://webservices.nextbus.com/service/publicXMLFeed?command=predictions&a=ttc&stopId=' + bus_stop_number
     root = _get_data(url)
@@ -54,6 +51,20 @@ def handle_next(bus_stop_number):
         return fmt_str % fmt_args
     
     response = map(stringify_prediction, root.findall('./predictions/direction/prediction'))
+    text = '\n'.join(response)
+
+    return text
+
+def handle_route_list():
+    url = 'http://webservices.nextbus.com/service/publicXMLFeed?command=routeList&a=ttc'
+    root = _get_data(url)
+
+    def stringify_route(route):
+        fmt_str = '[%s]: %s'
+        fmt_args = (route.attrib['tag'], route.attrib['title'].split('-')[1])
+        return fmt_str % fmt_args
+    
+    response = map(stringify_route, root.findall('./route'))
     text = '\n'.join(response)
 
     return text
@@ -70,15 +81,17 @@ def check_ttc(request):
 
             # todo parse text
             # ugh we have to split by space
-            [command,param] = text.split(' ')
+            split = text.split(' ')
+            command = split[0]
+            params = split[1:]
 
             command_map = {
                 'route': handle_route,
-                'schedule': handle_schedule,
-                'next': handle_next
+                'next': handle_next,
+                'list': handle_route_list
             }
             func = command_map.get(command, handle_invalid_command)
 
-            return JsonResponse({ 'text': func(param) })
+            return JsonResponse({ 'text': func(*param) })
 
     return JsonResponse({'slack-commands': ['ttc']})
