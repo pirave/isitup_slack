@@ -3,6 +3,7 @@ from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 
 from .forms import IsitupForm, TTCForm
+from .routes import routes
 
 from isitup.main import check
 import requests
@@ -26,9 +27,22 @@ def _get_data(url):
     r = requests.get(url, headers=headers)
     return ET.fromstring(r.text)
 
+def search_for_route_number(route_text):
+    for key, value in routes.iteritems():
+        if route_text.lower() in key.lower():
+            return value
 
-def handle_route(route_number):
-    url = 'http://webservices.nextbus.com/service/publicXMLFeed?command=routeConfig&a=ttc&r=' + route_number
+def handle_route(route_text):
+    # search routes
+    # if int, then just continue
+    try:
+        route_number = int(route_text)
+    except ValueError:
+        route_number = search_for_route_number(route_text)
+        if not route_number:
+            return 'No results found for ' + route_text
+
+    url = 'http://webservices.nextbus.com/service/publicXMLFeed?command=routeConfig&a=ttc&r=' + str(route_number)
     root = _get_data(url)
 
     def stringify_stop(stop):
@@ -92,6 +106,6 @@ def check_ttc(request):
             }
             func = command_map.get(command, handle_invalid_command)
 
-            return JsonResponse({ 'text': func(*param) })
+            return JsonResponse({ 'text': func(*params) })
 
     return JsonResponse({'slack-commands': ['ttc']})
